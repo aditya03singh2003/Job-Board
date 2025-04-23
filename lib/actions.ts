@@ -5,7 +5,6 @@ import { redirect } from "next/navigation"
 import { sql } from "./db"
 import bcrypt from "bcryptjs"
 import { getSession } from "./auth"
-import { v4 as uuidv4 } from "uuid"
 
 // User authentication actions
 export async function registerUser(formData: FormData, userType: string) {
@@ -71,68 +70,201 @@ export async function loginUser(email: string, password: string, userType: strin
   return { success: true, userId: user.id }
 }
 
-// Job actions
-export async function postJob(formData: FormData) {
+// Save a job for a job seeker
+export async function saveJob(jobId: string) {
   try {
-    // Get the current user session
     const session = await getSession()
-
-    if (!session || session.role !== "employer") {
-      throw new Error("Unauthorized: Only employers can post jobs")
+    if (!session) {
+      return { success: false, error: "Not authenticated" }
     }
 
-    const userId = session.id
-
-    // Get company ID for the employer
-    const companyResult = await sql`
-      SELECT id, name FROM companies WHERE user_id = ${userId}
+    // Check if already saved
+    const existingSave = await sql`
+      SELECT id FROM saved_jobs 
+      WHERE job_id = ${jobId} AND user_id = ${session.id}
     `
 
-    let companyId: string
-    let companyName: string
-
-    if (companyResult.length === 0) {
-      // Create a temporary company for demo purposes
-      companyId = uuidv4()
-      companyName = session.name || "Demo Company"
-
-      await sql`
-        INSERT INTO companies (id, name, user_id) 
-        VALUES (${companyId}, ${companyName}, ${userId})
-      `
-    } else {
-      companyId = companyResult[0].id
-      companyName = companyResult[0].name
+    if (existingSave.length > 0) {
+      return { success: false, error: "Job already saved" }
     }
 
-    // Get the title and other job details
+    // Save the job
+    await sql`
+      INSERT INTO saved_jobs (job_id, user_id) 
+      VALUES (${jobId}, ${session.id})
+    `
+
+    revalidatePath("/dashboard/jobseeker")
+    return { success: true }
+  } catch (error) {
+    console.error("Error saving job:", error)
+    return { success: false, error: "Failed to save job" }
+  }
+}
+
+// Unsave a job for a job seeker
+export async function unsaveJob(savedJobId: string) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      return { success: false, error: "Not authenticated" }
+    }
+
+    // Delete the saved job
+    await sql`
+      DELETE FROM saved_jobs 
+      WHERE id = ${savedJobId} AND user_id = ${session.id}
+    `
+
+    revalidatePath("/dashboard/jobseeker")
+    return { success: true }
+  } catch (error) {
+    console.error("Error unsaving job:", error)
+    return { success: false, error: "Failed to unsave job" }
+  }
+}
+
+// Apply for a job
+export async function applyForJob(formData: FormData) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      return { success: false, error: "Not authenticated" }
+    }
+
+    const jobId = formData.get("jobId") as string
+    const coverLetter = formData.get("coverLetter") as string
+    const resumeUrl = (formData.get("resumeUrl") as string) || "sample-resume.pdf"
+
+    // Check if already applied
+    const existingApplication = await sql`
+      SELECT id FROM applications 
+      WHERE job_id = ${jobId} AND user_id = ${session.id}
+    `
+
+    if (existingApplication.length > 0) {
+      return { success: false, error: "You have already applied for this job" }
+    }
+
+    // Create the application
+    await sql`
+      INSERT INTO applications (job_id, user_id, cover_letter, resume_url, status) 
+      VALUES (${jobId}, ${session.id}, ${coverLetter}, ${resumeUrl}, 'pending')
+    `
+
+    revalidatePath("/dashboard/jobseeker")
+    return { success: true }
+  } catch (error) {
+    console.error("Error applying for job:", error)
+    return { success: false, error: "Failed to apply for job" }
+  }
+}
+
+// Delete a job (for employers)
+export async function deleteJob(jobId: string, userId: string) {
+  try {
+    // Check if the job belongs to the user
+    const job = await sql`
+      SELECT j.id FROM jobs j
+      JOIN companies c ON j.company_id = c.id
+      WHERE j.id = ${jobId} AND c.user_id = ${userId}
+    `
+
+    if (job.length === 0) {
+      return { success: false, error: "Job not found or you don't have permission to delete it" }
+    }
+
+    // Delete the job
+    await sql`DELETE FROM jobs WHERE id = ${jobId}`
+
+    revalidatePath("/dashboard/employer")
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting job:", error)
+    return { success: false, error: "Failed to delete job" }
+  }
+}
+
+// Post a new job
+export async function postJob(formData: FormData) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      throw new Error("Not authenticated")
+    }
+
+    // Get company info
+    const company = await sql`
+      SELECT id, name FROM companies WHERE user_id = ${session.id}
+    `
+
+    if (company.length === 0) {
+      throw new Error("Company not found")
+    }
+
+    const companyId = company[0].id
+    const companyName = company[0].name
+
     const title = formData.get("title") as string
     const location = formData.get("location") as string
     const type = formData.get("type") as string
     const salary = formData.get("salary") as string
     const description = formData.get("description") as string
-    const requirements = (formData.get("requirements") as string).split("\n").filter(Boolean)
-    const responsibilities = (formData.get("responsibilities") as string).split("\n").filter(Boolean)
-    const tags = (formData.get("tags") as string)
+    const requirementsText = formData.get("requirements") as string
+    const responsibilitiesText = formData.get("responsibilities") as string
+    const tagsText = formData.get("tags") as string
+
+    // Convert requirements, responsibilities, and tags to arrays
+    const requirements = requirementsText
+      .split("\n")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+
+    const responsibilities = responsibilitiesText
+      .split("\n")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+
+    const tags = tagsText
       .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
 
-    // Generate a UUID for the job
-    const jobId = uuidv4()
-
-    await sql`
-      INSERT INTO jobs 
-      (id, title, company_id, company_name, location, type, salary, description, requirements, responsibilities, tags) 
-      VALUES (
-        ${jobId}, ${title}, ${companyId}, ${companyName}, ${location}, ${type}, ${salary}, 
-        ${description}, ${requirements}, ${responsibilities}, ${tags}
+    // Insert the job
+    const result = await sql`
+      INSERT INTO jobs (
+        title, 
+        company_id, 
+        company_name, 
+        location, 
+        type, 
+        salary, 
+        description, 
+        requirements, 
+        responsibilities, 
+        tags,
+        status
+      ) VALUES (
+        ${title}, 
+        ${companyId}, 
+        ${companyName}, 
+        ${location}, 
+        ${type}, 
+        ${salary}, 
+        ${description}, 
+        ${requirements}, 
+        ${responsibilities}, 
+        ${tags},
+        'active'
       )
+      RETURNING id
     `
 
+    const jobId = result[0].id
+
+    revalidatePath("/dashboard/employer")
     revalidatePath("/jobs")
     revalidatePath("/")
-    revalidatePath("/dashboard/employer")
 
     return { success: true, jobId }
   } catch (error) {
@@ -186,70 +318,6 @@ export async function updateJob(jobId: string, formData: FormData, userId: strin
   redirect("/dashboard/employer")
 }
 
-export async function deleteJob(jobId: string, userId: string) {
-  // Verify the job belongs to the employer
-  const jobResult = await sql`
-    SELECT j.id FROM jobs j
-    JOIN companies c ON j.company_id = c.id
-    WHERE j.id = ${jobId} AND c.user_id = ${userId}
-  `
-
-  if (jobResult.length === 0) {
-    throw new Error("Job not found or you don't have permission to delete it")
-  }
-
-  // Delete all applications for this job
-  await sql`DELETE FROM applications WHERE job_id = ${jobId}`
-
-  // Delete all saved references to this job
-  await sql`DELETE FROM saved_jobs WHERE job_id = ${jobId}`
-
-  // Delete the job
-  await sql`DELETE FROM jobs WHERE id = ${jobId}`
-
-  revalidatePath("/jobs")
-  revalidatePath("/dashboard/employer")
-  return { success: true }
-}
-
-// Application actions
-export async function applyForJob(jobId: string, formData: FormData) {
-  // Get the current user session
-  const session = await getSession()
-
-  if (!session || session.role !== "jobseeker") {
-    throw new Error("Unauthorized: Only job seekers can apply for jobs")
-  }
-
-  const userId = session.id
-
-  // Check if user has already applied for this job
-  const existingApplication = await sql`
-    SELECT id FROM applications WHERE job_id = ${jobId} AND user_id = ${userId}
-  `
-
-  if (existingApplication.length > 0) {
-    throw new Error("You have already applied for this job")
-  }
-
-  // In a real application, you would upload the resume to a storage service
-  // and get a URL to store in the database
-  const resumeUrl = "placeholder-resume-url"
-
-  const coverLetter = (formData.get("coverLetter") as string) || null
-
-  // Generate a UUID for the application
-  const applicationId = uuidv4()
-
-  await sql`
-    INSERT INTO applications (id, job_id, user_id, resume_url, cover_letter) 
-    VALUES (${applicationId}, ${jobId}, ${userId}, ${resumeUrl}, ${coverLetter})
-  `
-
-  revalidatePath("/dashboard/jobseeker")
-  return { success: true }
-}
-
 // Application actions
 export async function updateApplicationStatus(applicationId: string, status: string, userId: string) {
   try {
@@ -274,49 +342,6 @@ export async function updateApplicationStatus(applicationId: string, status: str
     return { success: true }
   } catch (error) {
     console.error("Error updating application status:", error)
-    throw error
-  }
-}
-
-// Saved jobs actions
-export async function saveJob(jobId: string, userId: string) {
-  try {
-    // Generate a UUID for the saved job
-    const savedJobId = uuidv4()
-
-    await sql`INSERT INTO saved_jobs (id, job_id, user_id) VALUES (${savedJobId}, ${jobId}, ${userId})`
-
-    revalidatePath("/dashboard/jobseeker")
-    return { success: true }
-  } catch (error) {
-    // Handle unique constraint violation (already saved)
-    return { success: false, error: "Job already saved" }
-  }
-}
-
-export async function unsaveJob(savedJobId: string, userId: string) {
-  try {
-    // For demo purposes, we'll handle non-UUID IDs by using a different query approach
-    // In a real application, you would ensure all IDs are proper UUIDs
-
-    // Check if the ID is a simple number (like "1", "2", "3")
-    if (/^\d+$/.test(savedJobId)) {
-      // For demo data with simple IDs, we'll delete the job from the mock data
-      // In a real app, this would be handled differently
-      console.log(`Removing saved job with simple ID: ${savedJobId}`)
-
-      // Simulate success for demo purposes
-      revalidatePath("/dashboard/jobseeker")
-      return { success: true }
-    }
-
-    // For proper UUIDs, use the database query
-    await sql`DELETE FROM saved_jobs WHERE id = ${savedJobId} AND user_id = ${userId}`
-
-    revalidatePath("/dashboard/jobseeker")
-    return { success: true }
-  } catch (error) {
-    console.error("Error unsaving job:", error)
     throw error
   }
 }

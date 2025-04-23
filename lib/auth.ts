@@ -136,8 +136,7 @@ export async function loginUser(email: string, password: string, userType: strin
 
 // Logout user
 export async function logoutUser() {
-  const cookieStore = cookies()
-  cookieStore.delete(SESSION_COOKIE_NAME)
+  cookies().delete(SESSION_COOKIE_NAME)
   redirect("/")
 }
 
@@ -146,8 +145,7 @@ async function createSession(user: UserSession) {
   // In a real app, you would use a more secure method like JWT
   // For simplicity, we'll just store the user info in a cookie
   const session = JSON.stringify(user)
-  const cookieStore = cookies()
-  cookieStore.set({
+  cookies().set({
     name: SESSION_COOKIE_NAME,
     value: session,
     httpOnly: true,
@@ -159,8 +157,7 @@ async function createSession(user: UserSession) {
 
 // Get current session
 export async function getSession(): Promise<UserSession | null> {
-  const cookieStore = cookies()
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)
+  const sessionCookie = cookies().get(SESSION_COOKIE_NAME)
 
   if (!sessionCookie) {
     return null

@@ -34,7 +34,7 @@ export default function EmployersPage() {
                   asChild
                   className="bg-gradient-to-r from-cyan-400 to-violet-500 text-black hover:from-cyan-500 hover:to-violet-600"
                 >
-                  <Link href="/employers/post-job">
+                  <Link href="/dashboard/employer/post-job">
                     Post a Job
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -374,7 +374,7 @@ export default function EmployersPage() {
               asChild
               className="bg-gradient-to-r from-cyan-400 to-violet-500 text-black hover:from-cyan-500 hover:to-violet-600"
             >
-              <Link href="/employers/post-job">
+              <Link href="/dashboard/employer/post-job">
                 Post a Job Now
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

@@ -27,7 +27,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <div className="min-h-screen flex flex-col">
+          <div className="min-h-screen flex flex-col light:bg-light-theme-bg-1 dark:bg-background">
             <Navbar session={session} />
             <main className="flex-1">{children}</main>
             <Footer />

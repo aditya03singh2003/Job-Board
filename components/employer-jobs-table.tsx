@@ -34,7 +34,7 @@ interface EmployerJobsTableProps {
   jobs: Job[]
 }
 
-export function EmployerJobsTable({ jobs }: EmployerJobsTableProps) {
+export function EmployerJobsTable({ jobs = [] }: EmployerJobsTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [jobToDelete, setJobToDelete] = useState<string | null>(null)
 
@@ -74,49 +74,57 @@ export function EmployerJobsTable({ jobs }: EmployerJobsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {jobs.map((job) => (
-              <TableRow key={job.id}>
-                <TableCell className="font-medium">{job.title}</TableCell>
-                <TableCell>{job.location}</TableCell>
-                <TableCell>{job.type}</TableCell>
-                <TableCell className="text-center">{job.applications}</TableCell>
-                <TableCell className="text-center">{job.views}</TableCell>
-                <TableCell>
-                  <Badge variant={job.status === "active" ? "default" : "secondary"}>
-                    {job.status === "active" ? "Active" : "Closed"}
-                  </Badge>
-                </TableCell>
-                <TableCell>{job.postedAt}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <Link href={`/jobs/${job.id}`}>
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
+            {jobs && jobs.length > 0 ? (
+              jobs.map((job) => (
+                <TableRow key={job.id}>
+                  <TableCell className="font-medium">{job.title}</TableCell>
+                  <TableCell>{job.location}</TableCell>
+                  <TableCell>{job.type}</TableCell>
+                  <TableCell className="text-center">{job.applications}</TableCell>
+                  <TableCell className="text-center">{job.views}</TableCell>
+                  <TableCell>
+                    <Badge variant={job.status === "active" ? "default" : "secondary"}>
+                      {job.status === "active" ? "Active" : "Closed"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{job.postedAt}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <Link href={`/jobs/${job.id}`}>
+                          <DropdownMenuItem>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href={`/dashboard/employer/edit-job/${job.id}`}>
+                          <DropdownMenuItem>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        </Link>
+                        <DropdownMenuItem onClick={() => handleDeleteClick(job.id)} className="text-red-600">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
                         </DropdownMenuItem>
-                      </Link>
-                      <Link href={`/dashboard/employer/edit-job/${job.id}`}>
-                        <DropdownMenuItem>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                      </Link>
-                      <DropdownMenuItem onClick={() => handleDeleteClick(job.id)} className="text-red-600">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-6">
+                  No jobs found. Start by posting a new job.
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
