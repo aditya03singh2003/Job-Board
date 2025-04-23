@@ -1,73 +1,46 @@
 "use client"
 
-import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { motion } from "framer-motion"
-import {
-  Menu,
-  X,
-  Briefcase,
-  ChevronDown,
-  LogIn,
-  UserPlus,
-  LayoutDashboard,
-  User,
-  LogOut,
-  Settings,
-  Search,
-} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { SearchForm } from "@/components/search-form"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Menu, X, LogIn, UserPlus, Briefcase, User, LogOut } from "lucide-react"
+import { getSession } from "@/lib/auth"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { SearchForm } from "@/components/search-form"
 
-type NavbarProps = {
-  session: any | null
-}
-
-export function Navbar({ session }: NavbarProps) {
+export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
+  const [session, setSession] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const pathname = usePathname()
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10)
+    async function checkSession() {
+      try {
+        const userSession = await getSession()
+        setSession(userSession)
+      } catch (error) {
+        console.error("Error checking session:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
-
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsOpen(false)
+    checkSession()
   }, [pathname])
 
-  // Store login status in localStorage for client-side checks
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("isLoggedIn", session ? "true" : "false")
-    }
-  }, [session])
-
-  const navLinks = [
-    { name: "Home", href: "/" },
-    { name: "Jobs", href: "/jobs" },
-    { name: "Employers", href: "/employers" },
-    { name: "About", href: "/about" },
-  ]
+  const closeSheet = () => setIsOpen(false)
 
   const getDashboardLink = () => {
     if (!session) return "/auth/login"
@@ -80,261 +53,204 @@ export function Navbar({ session }: NavbarProps) {
       case "admin":
         return "/admin"
       default:
-        return "/dashboard/jobseeker"
+        return "/dashboard"
     }
   }
 
   const getInitials = (name: string) => {
+    if (!name) return "U"
     return name
       .split(" ")
-      .map((part) => part[0])
+      .map((n) => n[0])
       .join("")
       .toUpperCase()
       .substring(0, 2)
   }
 
   return (
-    <header
-      className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-        scrolled || isOpen ? "border-b border-border bg-background/80 backdrop-blur-xl" : "bg-transparent"
-      }`}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 font-bold">
-            <Briefcase className="h-6 w-6 text-primary" />
-            <span className="bg-gradient-to-r from-cyan-400 to-violet-500 bg-clip-text text-transparent">
-              JobConnect
-            </span>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b">
+      <div className="container mx-auto px-4 flex h-16 items-center justify-between">
+        <div className="flex items-center">
+          <Link href="/" className="flex items-center">
+            <Briefcase className="h-6 w-6 text-primary mr-2" />
+            <span className="font-bold text-xl">JobBoard</span>
           </Link>
+        </div>
 
-          {/* Search Bar - Desktop */}
-          <div className="hidden md:flex md:flex-1 md:max-w-md mx-4">
-            <SearchForm variant="minimal" />
-          </div>
+        <div className="hidden md:flex items-center space-x-1">
+          <Link href="/">
+            <Button variant="ghost">Home</Button>
+          </Link>
+          <Link href="/jobs">
+            <Button variant="ghost">Browse Jobs</Button>
+          </Link>
+          <Link href="/employers">
+            <Button variant="ghost">For Employers</Button>
+          </Link>
+          <Link href="/about">
+            <Button variant="ghost">About</Button>
+          </Link>
+        </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex md:items-center md:space-x-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`text-sm transition-colors hover:text-primary ${
-                  pathname === link.href ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
+        <div className="hidden md:flex items-center space-x-4">
+          <SearchForm className="w-64" />
+          <ThemeToggle />
 
-            {session ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2 text-sm hover:bg-accent">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={session.image || ""} alt={session.name} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {getInitials(session.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden sm:inline">{session.name}</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href={getDashboardLink()} className="cursor-pointer flex items-center">
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </Link>
+          {isLoading ? (
+            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+          ) : session ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt={session.name} />
+                    <AvatarFallback>{getInitials(session.name)}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{session.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{session.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Link href={getDashboardLink()}>
+                  <DropdownMenuItem>
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="cursor-pointer flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" className="cursor-pointer flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/auth/logout" className="cursor-pointer flex items-center text-destructive">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/auth/login"
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
-                >
-                  <LogIn className="h-4 w-4" />
-                  <span>Login</span>
                 </Link>
-                <Button
-                  asChild
-                  className="flex items-center gap-1 bg-gradient-to-r from-cyan-400 to-violet-500 text-black hover:from-cyan-500 hover:to-violet-600"
-                >
-                  <Link href="/auth/register">
-                    <UserPlus className="h-4 w-4" />
-                    <span>Sign Up</span>
-                  </Link>
+                <Link href={`/dashboard/${session.role}/profile`}>
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuSeparator />
+                <Link href="/auth/logout">
+                  <DropdownMenuItem>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </Link>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Link href="/auth/login">
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Log in
                 </Button>
-              </div>
-            )}
-
-            <ThemeToggle />
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <div className="flex items-center gap-2 md:hidden">
-            {/* Search Icon - Mobile */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-foreground">
-                  <Search className="h-5 w-5" />
+              </Link>
+              <Link href="/auth/register">
+                <Button className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Sign up
                 </Button>
-              </SheetTrigger>
-              <SheetContent side="top" className="pt-16">
-                <SearchForm variant="minimal" />
-              </SheetContent>
-            </Sheet>
+              </Link>
+            </>
+          )}
+        </div>
 
-            {session && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={session.image || ""} alt={session.name} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {getInitials(session.name)}
-                      </AvatarFallback>
-                    </Avatar>
+        <div className="flex md:hidden items-center space-x-4">
+          <ThemeToggle />
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+                <SheetDescription>
+                  <Button variant="ghost" size="icon" onClick={closeSheet} className="absolute top-4 right-4">
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Close</span>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href={getDashboardLink()} className="cursor-pointer flex items-center">
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="cursor-pointer flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/auth/logout" className="cursor-pointer flex items-center text-destructive">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="py-4 flex flex-col space-y-4">
+                <SearchForm />
+                <Link href="/" onClick={closeSheet}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    Home
+                  </Button>
+                </Link>
+                <Link href="/jobs" onClick={closeSheet}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    Browse Jobs
+                  </Button>
+                </Link>
+                <Link href="/employers" onClick={closeSheet}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    For Employers
+                  </Button>
+                </Link>
+                <Link href="/about" onClick={closeSheet}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    About
+                  </Button>
+                </Link>
 
-            <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-foreground"
-              onClick={() => setIsOpen(!isOpen)}
-              aria-label="Toggle menu"
-            >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
-          </div>
+                {isLoading ? (
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                ) : session ? (
+                  <>
+                    <div className="flex items-center space-x-2 px-4 py-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt={session.name} />
+                        <AvatarFallback>{getInitials(session.name)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{session.name}</p>
+                        <p className="text-xs text-muted-foreground">{session.email}</p>
+                      </div>
+                    </div>
+                    <Link href={getDashboardLink()} onClick={closeSheet}>
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Briefcase className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Link href={`/dashboard/${session.role}/profile`} onClick={closeSheet}>
+                      <Button variant="ghost" className="w-full justify-start">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </Button>
+                    </Link>
+                    <Link href="/auth/logout" onClick={closeSheet}>
+                      <Button variant="ghost" className="w-full justify-start">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Log out
+                      </Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/auth/login" onClick={closeSheet}>
+                      <Button variant="ghost" className="w-full justify-start">
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Log in
+                      </Button>
+                    </Link>
+                    <Link href="/auth/register" onClick={closeSheet}>
+                      <Button className="w-full justify-start">
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Sign up
+                      </Button>
+                    </Link>
+                  </>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
-
-      {/* Mobile Navigation */}
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="border-t border-border bg-background/90 md:hidden"
-        >
-          <div className="container mx-auto px-4 py-4">
-            <nav className="flex flex-col space-y-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={`text-sm transition-colors hover:text-primary ${
-                    pathname === link.href ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
-              {!session ? (
-                <>
-                  <Link
-                    href="/auth/login"
-                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
-                  >
-                    <LogIn className="h-4 w-4" />
-                    <span>Login</span>
-                  </Link>
-                  <Button
-                    asChild
-                    className="flex items-center gap-1 bg-gradient-to-r from-cyan-400 to-violet-500 text-black hover:from-cyan-500 hover:to-violet-600"
-                  >
-                    <Link href="/auth/register">
-                      <UserPlus className="h-4 w-4" />
-                      <span>Sign Up</span>
-                    </Link>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href={getDashboardLink()}
-                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
-                  >
-                    <User className="h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                  <Link
-                    href="/settings"
-                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                  <Link
-                    href="/auth/logout"
-                    className="flex items-center gap-1 text-sm text-destructive hover:text-destructive/80"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </Link>
-                </>
-              )}
-            </nav>
-          </div>
-        </motion.div>
-      )}
     </header>
   )
 }

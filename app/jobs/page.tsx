@@ -152,7 +152,7 @@ export default function JobsPage() {
   }, [searchQuery, selectedLocation, selectedJobTypes, selectedExperienceLevels, sortBy, jobs])
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 pt-24">
       <motion.h1
         className="text-3xl font-bold mb-8"
         initial={{ opacity: 0, y: -10 }}
