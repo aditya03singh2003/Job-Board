@@ -93,6 +93,43 @@ export async function POST(request: Request) {
 
       const company2Id = company2Result[0].id
 
+      // Create a third employer
+      const employer3PasswordHash = await bcrypt.hash("employer123", 10)
+      const employer3Result = await sql`
+        INSERT INTO users (name, email, password_hash, role)
+        VALUES ('HealthPlus', 'healthplus@example.com', ${employer3PasswordHash}, 'employer')
+        RETURNING id
+      `
+
+      const employer3Id = employer3Result[0].id
+
+      // Create company for the third employer
+      const company3Result = await sql`
+        INSERT INTO companies (
+          name, 
+          user_id, 
+          website, 
+          location, 
+          industry, 
+          size, 
+          description,
+          logo_url
+        )
+        VALUES (
+          'HealthPlus', 
+          ${employer3Id}, 
+          'https://healthplus.com', 
+          'Delhi, India', 
+          'Healthcare', 
+          '501-1000', 
+          'A leading healthcare provider with a focus on digital health solutions.',
+          '/placeholder.svg?height=100&width=100'
+        )
+        RETURNING id
+      `
+
+      const company3Id = company3Result[0].id
+
       // Create a job seeker
       const jobseekerPasswordHash = await bcrypt.hash("jobseeker123", 10)
       await sql`
@@ -176,6 +213,58 @@ export async function POST(request: Request) {
           ARRAY['3+ years of experience in UX/UI design', 'Proficiency with design tools like Figma', 'Portfolio demonstrating UI design skills', 'Experience with user research and testing'], 
           ARRAY['Create wireframes, prototypes, and user flows', 'Conduct user research and usability testing', 'Collaborate with developers to implement designs', 'Maintain design system and documentation'], 
           ARRAY['UX', 'UI', 'Figma', 'Design']
+        )
+      `
+
+      await sql`
+        INSERT INTO jobs (
+          title, 
+          company_id, 
+          company_name, 
+          location, 
+          type, 
+          salary, 
+          description, 
+          requirements, 
+          responsibilities, 
+          tags
+        ) VALUES (
+          'Mobile Developer (iOS)', 
+          ${companyId}, 
+          'Demo Company', 
+          'Mumbai, India', 
+          'Full-time', 
+          '₹12,00,000 - ₹20,00,000', 
+          '<p>We are looking for an iOS Developer to join our mobile team.</p><p>As an iOS Developer, you will be responsible for developing and maintaining iOS applications, implementing new features, and ensuring high-quality code.</p>', 
+          ARRAY['3+ years of experience with Swift', 'Experience with iOS frameworks', 'Knowledge of RESTful APIs', 'Understanding of mobile UI/UX principles'], 
+          ARRAY['Develop and maintain iOS applications', 'Implement new features', 'Collaborate with design and backend teams', 'Ensure code quality and performance'], 
+          ARRAY['iOS', 'Swift', 'Mobile', 'Apple']
+        )
+      `
+
+      await sql`
+        INSERT INTO jobs (
+          title, 
+          company_id, 
+          company_name, 
+          location, 
+          type, 
+          salary, 
+          description, 
+          requirements, 
+          responsibilities, 
+          tags
+        ) VALUES (
+          'Mobile Developer (Android)', 
+          ${companyId}, 
+          'Demo Company', 
+          'Mumbai, India', 
+          'Full-time', 
+          '₹12,00,000 - ₹20,00,000', 
+          '<p>We are looking for an Android Developer to join our mobile team.</p><p>As an Android Developer, you will be responsible for developing and maintaining Android applications, implementing new features, and ensuring high-quality code.</p>', 
+          ARRAY['3+ years of experience with Kotlin or Java', 'Experience with Android SDK', 'Knowledge of RESTful APIs', 'Understanding of mobile UI/UX principles'], 
+          ARRAY['Develop and maintain Android applications', 'Implement new features', 'Collaborate with design and backend teams', 'Ensure code quality and performance'], 
+          ARRAY['Android', 'Kotlin', 'Mobile', 'Google']
         )
       `
 
@@ -297,16 +386,43 @@ export async function POST(request: Request) {
           responsibilities, 
           tags
         ) VALUES (
-          'Mobile Developer (iOS)', 
-          ${companyId}, 
-          'Demo Company', 
-          'Mumbai, India', 
+          'Cybersecurity Analyst', 
+          ${company2Id}, 
+          'TechCorp', 
+          'Pune, India', 
           'Full-time', 
-          '₹12,00,000 - ₹20,00,000', 
-          '<p>We are looking for an iOS Developer to join our mobile team.</p><p>As an iOS Developer, you will be responsible for developing and maintaining iOS applications, implementing new features, and ensuring high-quality code.</p>', 
-          ARRAY['3+ years of experience with Swift', 'Experience with iOS frameworks', 'Knowledge of RESTful APIs', 'Understanding of mobile UI/UX principles'], 
-          ARRAY['Develop and maintain iOS applications', 'Implement new features', 'Collaborate with design and backend teams', 'Ensure code quality and performance'], 
-          ARRAY['iOS', 'Swift', 'Mobile', 'Apple']
+          '₹15,00,000 - ₹25,00,000', 
+          '<p>We are looking for a Cybersecurity Analyst to help us protect our systems and data.</p><p>As a Cybersecurity Analyst, you will monitor systems for security breaches, implement security measures, and respond to incidents.</p>', 
+          ARRAY['3+ years of experience in cybersecurity', 'Knowledge of security frameworks and best practices', 'Experience with security tools and technologies', 'Understanding of network security principles'], 
+          ARRAY['Monitor systems for security breaches', 'Implement security measures', 'Respond to security incidents', 'Conduct security assessments'], 
+          ARRAY['Cybersecurity', 'Security', 'Network', 'Compliance']
+        )
+      `
+
+      // Insert sample jobs for HealthPlus
+      await sql`
+        INSERT INTO jobs (
+          title, 
+          company_id, 
+          company_name, 
+          location, 
+          type, 
+          salary, 
+          description, 
+          requirements, 
+          responsibilities, 
+          tags
+        ) VALUES (
+          'Medical Software Developer', 
+          ${company3Id}, 
+          'HealthPlus', 
+          'Delhi, India', 
+          'Full-time', 
+          '₹14,00,000 - ₹22,00,000', 
+          '<p>We are looking for a Medical Software Developer to help us build healthcare applications.</p><p>As a Medical Software Developer, you will develop software for healthcare applications, ensuring compliance with medical standards and regulations.</p>', 
+          ARRAY['3+ years of experience in software development', 'Knowledge of healthcare standards (HL7, FHIR, etc.)', 'Experience with Java or C#', 'Understanding of medical terminology'], 
+          ARRAY['Develop healthcare applications', 'Ensure compliance with medical standards', 'Collaborate with healthcare professionals', 'Implement security measures for patient data'], 
+          ARRAY['Healthcare', 'Java', 'Medical', 'Software']
         )
       `
 
@@ -323,16 +439,94 @@ export async function POST(request: Request) {
           responsibilities, 
           tags
         ) VALUES (
-          'Mobile Developer (Android)', 
-          ${companyId}, 
-          'Demo Company', 
+          'Clinical Data Analyst', 
+          ${company3Id}, 
+          'HealthPlus', 
+          'Delhi, India', 
+          'Full-time', 
+          '₹12,00,000 - ₹18,00,000', 
+          '<p>We are seeking a Clinical Data Analyst to help us analyze and interpret clinical data.</p><p>As a Clinical Data Analyst, you will analyze and interpret clinical data, generate reports, and support clinical research efforts.</p>', 
+          ARRAY['3+ years of experience in data analysis', 'Knowledge of healthcare data standards', 'Experience with statistical analysis tools', 'Understanding of clinical terminology'], 
+          ARRAY['Analyze and interpret clinical data', 'Generate reports for stakeholders', 'Support clinical research efforts', 'Ensure data quality and integrity'], 
+          ARRAY['Data Analysis', 'Healthcare', 'Statistics', 'Clinical']
+        )
+      `
+
+      await sql`
+        INSERT INTO jobs (
+          title, 
+          company_id, 
+          company_name, 
+          location, 
+          type, 
+          salary, 
+          description, 
+          requirements, 
+          responsibilities, 
+          tags
+        ) VALUES (
+          'Healthcare Project Manager', 
+          ${company3Id}, 
+          'HealthPlus', 
           'Mumbai, India', 
           'Full-time', 
-          '₹12,00,000 - ₹20,00,000', 
-          '<p>We are looking for an Android Developer to join our mobile team.</p><p>As an Android Developer, you will be responsible for developing and maintaining Android applications, implementing new features, and ensuring high-quality code.</p>', 
-          ARRAY['3+ years of experience with Kotlin or Java', 'Experience with Android SDK', 'Knowledge of RESTful APIs', 'Understanding of mobile UI/UX principles'], 
-          ARRAY['Develop and maintain Android applications', 'Implement new features', 'Collaborate with design and backend teams', 'Ensure code quality and performance'], 
-          ARRAY['Android', 'Kotlin', 'Mobile', 'Google']
+          '₹18,00,000 - ₹28,00,000', 
+          '<p>We are looking for a Healthcare Project Manager to lead our healthcare initiatives.</p><p>As a Healthcare Project Manager, you will plan, execute, and oversee healthcare projects, ensuring they meet quality standards and are delivered on time and within budget.</p>', 
+          ARRAY['5+ years of experience in project management', 'PMP certification preferred', 'Experience in healthcare industry', 'Strong leadership and communication skills'], 
+          ARRAY['Plan and execute healthcare projects', 'Manage project resources and budgets', 'Coordinate with stakeholders', 'Ensure compliance with healthcare regulations'], 
+          ARRAY['Project Management', 'Healthcare', 'Leadership', 'PMP']
+        )
+      `
+
+      await sql`
+        INSERT INTO jobs (
+          title, 
+          company_id, 
+          company_name, 
+          location, 
+          type, 
+          salary, 
+          description, 
+          requirements, 
+          responsibilities, 
+          tags
+        ) VALUES (
+          'Telemedicine Specialist', 
+          ${company3Id}, 
+          'HealthPlus', 
+          'Remote', 
+          'Full-time', 
+          '₹10,00,000 - ₹16,00,000', 
+          '<p>We are seeking a Telemedicine Specialist to support our virtual healthcare services.</p><p>As a Telemedicine Specialist, you will facilitate virtual consultations, provide technical support to patients and healthcare providers, and ensure a smooth telemedicine experience.</p>', 
+          ARRAY['2+ years of experience in healthcare or customer support', 'Knowledge of telemedicine platforms', 'Strong communication and problem-solving skills', 'Understanding of healthcare privacy regulations'], 
+          ARRAY['Facilitate virtual consultations', 'Provide technical support', 'Ensure patient privacy and data security', 'Coordinate with healthcare providers'], 
+          ARRAY['Telemedicine', 'Healthcare', 'Customer Support', 'Virtual Care']
+        )
+      `
+
+      await sql`
+        INSERT INTO jobs (
+          title, 
+          company_id, 
+          company_name, 
+          location, 
+          type, 
+          salary, 
+          description, 
+          requirements, 
+          responsibilities, 
+          tags
+        ) VALUES (
+          'Health Informatics Specialist', 
+          ${company3Id}, 
+          'HealthPlus', 
+          'Bangalore, India', 
+          'Full-time', 
+          '₹14,00,000 - ₹22,00,000', 
+          '<p>We are looking for a Health Informatics Specialist to help us manage and analyze healthcare data.</p><p>As a Health Informatics Specialist, you will design and implement health information systems, analyze healthcare data, and ensure data quality and compliance with regulations.</p>', 
+          ARRAY['3+ years of experience in health informatics', 'Knowledge of healthcare data standards', 'Experience with electronic health records (EHR) systems', 'Understanding of healthcare regulations'], 
+          ARRAY['Design and implement health information systems', 'Analyze healthcare data', 'Ensure data quality and compliance', 'Support clinical decision-making'], 
+          ARRAY['Health Informatics', 'Healthcare', 'Data', 'EHR']
         )
       `
     }

@@ -88,75 +88,53 @@ export async function postJob(formData: FormData) {
       SELECT id, name FROM companies WHERE user_id = ${userId}
     `
 
+    let companyId: string
+    let companyName: string
+
     if (companyResult.length === 0) {
       // Create a temporary company for demo purposes
-      const companyId = uuidv4()
-      const companyName = "Demo Company"
+      companyId = uuidv4()
+      companyName = session.name || "Demo Company"
 
       await sql`
         INSERT INTO companies (id, name, user_id) 
         VALUES (${companyId}, ${companyName}, ${userId})
       `
-
-      // Get the title and other job details
-      const title = formData.get("title") as string
-      const location = formData.get("location") as string
-      const type = formData.get("type") as string
-      const salary = formData.get("salary") as string
-      const description = formData.get("description") as string
-      const requirements = (formData.get("requirements") as string).split("\n").filter(Boolean)
-      const responsibilities = (formData.get("responsibilities") as string).split("\n").filter(Boolean)
-      const tags = (formData.get("tags") as string)
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-
-      // Generate a UUID for the job
-      const jobId = uuidv4()
-
-      await sql`
-        INSERT INTO jobs 
-        (id, title, company_id, company_name, location, type, salary, description, requirements, responsibilities, tags) 
-        VALUES (
-          ${jobId}, ${title}, ${companyId}, ${companyName}, ${location}, ${type}, ${salary}, 
-          ${description}, ${requirements}, ${responsibilities}, ${tags}
-        )
-      `
     } else {
-      const companyId = companyResult[0].id
-      const companyName = companyResult[0].name
-
-      // Get the title and other job details
-      const title = formData.get("title") as string
-      const location = formData.get("location") as string
-      const type = formData.get("type") as string
-      const salary = formData.get("salary") as string
-      const description = formData.get("description") as string
-      const requirements = (formData.get("requirements") as string).split("\n").filter(Boolean)
-      const responsibilities = (formData.get("responsibilities") as string).split("\n").filter(Boolean)
-      const tags = (formData.get("tags") as string)
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-
-      // Generate a UUID for the job
-      const jobId = uuidv4()
-
-      await sql`
-        INSERT INTO jobs 
-        (id, title, company_id, company_name, location, type, salary, description, requirements, responsibilities, tags) 
-        VALUES (
-          ${jobId}, ${title}, ${companyId}, ${companyName}, ${location}, ${type}, ${salary}, 
-          ${description}, ${requirements}, ${responsibilities}, ${tags}
-        )
-      `
+      companyId = companyResult[0].id
+      companyName = companyResult[0].name
     }
+
+    // Get the title and other job details
+    const title = formData.get("title") as string
+    const location = formData.get("location") as string
+    const type = formData.get("type") as string
+    const salary = formData.get("salary") as string
+    const description = formData.get("description") as string
+    const requirements = (formData.get("requirements") as string).split("\n").filter(Boolean)
+    const responsibilities = (formData.get("responsibilities") as string).split("\n").filter(Boolean)
+    const tags = (formData.get("tags") as string)
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+
+    // Generate a UUID for the job
+    const jobId = uuidv4()
+
+    await sql`
+      INSERT INTO jobs 
+      (id, title, company_id, company_name, location, type, salary, description, requirements, responsibilities, tags) 
+      VALUES (
+        ${jobId}, ${title}, ${companyId}, ${companyName}, ${location}, ${type}, ${salary}, 
+        ${description}, ${requirements}, ${responsibilities}, ${tags}
+      )
+    `
 
     revalidatePath("/jobs")
     revalidatePath("/")
     revalidatePath("/dashboard/employer")
 
-    return { success: true }
+    return { success: true, jobId }
   } catch (error) {
     console.error("Error posting job:", error)
     throw error
